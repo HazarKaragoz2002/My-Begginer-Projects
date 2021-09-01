@@ -1,0 +1,91 @@
+import sys, sqlite3
+from PyQt5 import QtWidgets
+
+
+class Window(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.interface()
+        self.access_to_database()
+
+    def interface(self):
+        # Widgets:
+        # ----------------------------------------------------------
+        self.button_1 = QtWidgets.QPushButton("Save all information")
+        self.text_space = QtWidgets.QLabel("")
+        self.name_line = QtWidgets.QLineEdit()
+        self.name = QtWidgets.QLabel("Name")
+        self.surname = QtWidgets.QLabel("Surname")
+        self.surname_line = QtWidgets.QLineEdit()
+        self.user_name = QtWidgets.QLabel("User name")
+        self.username_line = QtWidgets.QLineEdit()
+        self.email = QtWidgets.QLabel("E-mail")
+        self.email_line = QtWidgets.QLineEdit()
+        self.password = QtWidgets.QLabel("Password")
+        self.password_line = QtWidgets.QLineEdit()
+        self.password_line.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.password2 = QtWidgets.QLabel("Password again")
+        self.password_line2 = QtWidgets.QLineEdit()
+        self.password_line2.setEchoMode(QtWidgets.QLineEdit.Password)
+        # --------------------------------------------------
+        v_box = QtWidgets.QVBoxLayout()
+        v_box.addWidget(self.name)
+        v_box.addWidget(self.name_line)
+        v_box.addWidget(self.surname)
+        v_box.addWidget(self.surname_line)
+        v_box.addWidget(self.user_name)
+        v_box.addWidget(self.username_line)
+        v_box.addWidget(self.email)
+        v_box.addWidget(self.email_line)
+        v_box.addWidget(self.password)
+        v_box.addWidget(self.password_line)
+        v_box.addWidget(self.password2)
+        v_box.addWidget(self.password_line2)
+        v_box.addWidget(self.text_space)
+        v_box.addWidget(self.button_1)
+        v_box.addStretch()
+        # ---------------------------------------------------
+        h_box = QtWidgets.QHBoxLayout()
+        h_box.addStretch()
+        h_box.addLayout(v_box)
+        h_box.addStretch()
+        # ---------------------------------------------------
+        self.button_1.clicked.connect(self.registration)
+        self.setLayout(h_box)
+        self.setWindowTitle("Registration Program")
+        self.setGeometry(300, 300, 800, 500)
+        self.show()
+
+    def access_to_database(self):
+        self.access = sqlite3.connect("registration2.db")
+        self.cursor = self.access.cursor()
+        self.cursor.execute(
+            "Create Table if not exists customers (Name TEXT, Surname TEXT, User_name TEXT, Email TEXT, Password TEXT)")
+        self.access.commit()
+
+    def registration(self):
+        self.cursor.execute("Select * From customers")
+        customers = self.cursor.fetchall()
+        value = 0
+        for i in customers:
+            if self.email_line.text() == i[3] or self.username_line.text() == i[2]:
+                value += 1
+        if value == 0:
+            if self.password_line.text() == self.password_line2.text() and self.email_line.text().endswith(
+                    ".com") == True and self.email_line.text().find("@") != -1:
+                self.cursor.execute("Insert into customers values (?,?,?,?,?)",
+                                    (self.name_line.text().capitalize(), self.surname_line.text().capitalize(),
+                                     self.username_line.text(),
+                                     self.email_line.text(),
+                                     self.password_line.text()))
+                self.access.commit()
+                self.text_space.setText("The information saved successfully!")
+            else:
+                self.text_space.setText("The information is written wrong!")
+        else:
+            self.text_space.setText("This user is already registered!")
+
+
+app = QtWidgets.QApplication(sys.argv)
+window = Window()
+sys.exit(app.exec_())
