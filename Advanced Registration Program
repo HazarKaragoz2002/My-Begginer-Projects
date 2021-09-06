@@ -1,0 +1,112 @@
+import sys
+from PyQt5.uic import loadUi
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QApplication, QDialog
+import sqlite3
+
+
+class WelcomeScreen(QDialog):
+    def __init__(self):
+        super(WelcomeScreen, self).__init__()
+        loadUi("welcomescreen.ui", self)
+        self.login_button.clicked.connect(self.login)
+        self.account_button.clicked.connect(self.gotocreate)
+
+    def login(self):
+        login_screen = LoginScreen()
+        widget.addWidget(login_screen)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+    def gotocreate(self):
+        account = CreateAccountScreen()
+        widget.addWidget(account)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+
+class LoginScreen(QDialog):
+    def __init__(self):
+        super(LoginScreen, self).__init__()
+        loadUi("loginscreen.ui", self)
+        self.password_line.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.login_button2.clicked.connect(self.loginprocess)
+        self.clickhere_button.clicked.connect(self.movetocreate)
+        self.database()
+
+    def database(self):
+        self.access = sqlite3.connect("CUSTOMERS.db")
+        self.cursor = self.access.cursor()
+        self.cursor.execute(
+            "Create Table if not exists USERS (NAME TEXT, SURNAME TEXT, USERNAME TEXT, EMAIL TEXT, PASSWORD TEXT)")
+        self.access.commit()
+
+    def loginprocess(self):
+        username = self.username_line.text()
+        password = self.password_line.text()
+        if username == "" or password == "":
+            self.informative_text_2.setText("Please fill in all fields!")
+        else:
+            self.cursor.execute("SELECT * FROM USERS WHERE USERNAME = ? AND PASSWORD = ?",
+                                (username, password))
+            users = self.cursor.fetchall()
+            if len(users) == 0:
+                self.informative_text_2.setText("Invalid username or password!")
+            else:
+                self.informative_text_2.setText(f"Welcome {username}")
+
+    def movetocreate(self):
+        account = CreateAccountScreen()
+        widget.addWidget(account)
+        widget.setCurrentIndex(widget.currentIndex() + 1)
+
+
+class CreateAccountScreen(QDialog):
+    def __init__(self):
+        super(CreateAccountScreen, self).__init__()
+        loadUi("createaccountscreen.ui", self)
+        self.password_line_2.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.password_line_3.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.create_button.clicked.connect(self.gotoprofile)
+        self.importdatabase = LoginScreen()
+
+    def gotoprofile(self):
+        if self.name_line.text() == "" or self.surname_line.text() == "" or self.username_line_2.text() == "" \
+                or self.email_line.text() == "" or self.password_line_2.text() == "" or \
+                self.password_line_3.text() == "":
+            self.informative_text_3.setText("Please fill in all fields!")
+        else:
+            if self.password_line_2.text() == self.password_line_3.text() and self.email_line.text().endswith(
+                    ".com") and self.email_line.text().find("@") != -1:
+                self.importdatabase.cursor.execute("Select * From USERS where USERNAME = ? or EMAIL = ?",
+                                                   (self.username_line_2.text(), self.email_line.text()))
+                users2 = self.importdatabase.cursor.fetchall()
+                if len(users2) == 0:
+                    self.importdatabase.cursor.execute(
+                        "INSERT INTO USERS VALUES (?,?,?,?,?)", (
+                            self.name_line.text().capitalize(), self.surname_line.text().capitalize(),
+                            self.username_line_2.text(),
+                            self.email_line.text(),
+                            self.password_line_2.text()))
+                    self.importdatabase.access.commit()
+                    self.informative_text_3.setText("The information saved successfully!")
+                    self.importdatabase.access.close()
+                elif self.email_line.text() == users2[0][3]:
+                    self.informative_text_3.setText("This email is already used!")
+                elif self.username_line_2.text() == users2[0][2]:
+                    self.informative_text_3.setText("This username is already used!")
+            else:
+                self.informative_text_3.setText("The information is written incorrectly!")
+
+
+# main
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    welcome = WelcomeScreen()
+    widget = QtWidgets.QStackedWidget()
+    widget.addWidget(welcome)
+    widget.setFixedWidth(1200)
+    widget.setFixedHeight(800)
+    widget.show()
+    try:
+        sys.exit(app.exec_())
+    except:
+        sys.stderr.write("Existing...")
